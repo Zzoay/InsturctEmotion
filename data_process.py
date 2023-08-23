@@ -12,6 +12,7 @@ from datasets import load_dataset, load_from_disk
 
 from config import *
 from er_data_utils.processing import * 
+from utils import process_dialogue_pairs
 
 random.seed(RANDOM_SEED)
 
@@ -23,81 +24,77 @@ download dataset from hugginface hub
 >>> dataset.save_to_disk(f'data/{dataset_name}')
 '''
 def process_esconv(split='train'):
-    max_turn, overlap = 12, 4 
+    max_turn, overlap = 10, 2 
     ret = []
+    user_strings = ['Hello', 'hello~', 'hi', "let's start a chat", "I want to chat with you", "I want to talk to you."]
     dataset = load_from_disk('data/esconv')
     for row in dataset[split]['text']:
         row = json.loads(row)
         dialog = row['dialog']
-        tmp_dialog = []
-        usr_uttr, bot_uttr = '', ''
-        for uttr_idx, utterance in enumerate(dialog):
-            if uttr_idx == 0 and utterance['speaker'] == 'sys':
-                user_prefix = random.choice(['', ' ', 'Hello', 'hi', "let's start a chat", "I want to chat with you"])
-                tmp_dialog.append([f'User: {user_prefix}' + 'Bot: ', utterance['text']])
-                continue
-            if utterance['speaker'] == 'usr':
-                usr_uttr += '\n' + utterance['text']
-            elif utterance['speaker'] == 'sys':
-                bot_uttr += '\n' + utterance['text']
 
-            if utterance['speaker'] == 'sys' and utterance['speaker'] != dialog[uttr_idx-1]['speaker']:
-                tmp_dialog.append(['User: ' + usr_uttr.strip() + f'{SEP_TOKEN}Bot: ', bot_uttr.strip()])
-                usr_uttr, bot_uttr = '', ''
+        tmp_dialog = process_dialogue_pairs(dialog, 
+                                            user_strings=user_strings, 
+                                            sep_token='\n', 
+                                            eos_token=EOS_TOKEN, 
+                                            mode=split)
 
-        ret.extend([tmp_dialog[i:i+max_turn] for i in range(0, len(tmp_dialog) - overlap, max_turn - overlap)])  # with overlap
-
+        if split == 'train':
+            ret.extend([tmp_dialog[i:i+max_turn] for i in range(0, len(tmp_dialog) - overlap, max_turn - overlap)])  # with overlap
+        else:
+            ret.append(tmp_dialog)
+    
     print('Data loaded from esconv: ', len(ret)) # ~1k sessions
+    # too less, repeating
+    if split == 'train':
+        ret.extend([x for x in ret])
+        random.shuffle(ret)
     return ret
 
 def process_augesc(split='train'):
-    max_turn, overlap = 12, 4 
+    max_turn, overlap = 10, 2
     ret = []
+    user_strings = ['Hello', 'hello~', 'hi', "let's start a chat", "I want to chat with you", "I want to talk to you."]
     dataset = load_from_disk('data/augesc')
     for row in tqdm(dataset[split]['text']):
         try:
             dialog = json.loads(row)
         except json.decoder.JSONDecodeError:  # data format error
             continue
-        tmp_dialog = []
-        usr_uttr, bot_uttr = '', ''
-        for uttr_idx, utterance in enumerate(dialog):
-            speaker, text = utterance[0], utterance[1]
-            if uttr_idx == 0 and speaker == 'sys':
-                user_prefix = random.choice(['', ' ', 'Hello', 'hi', "let's start a chat", "I want to chat with you"])
-                tmp_dialog.append([f'User: {user_prefix}' + 'Bot: ', text])
-                continue
-            if speaker == 'usr':
-                usr_uttr += '\n' + text
-            elif speaker == 'sys':
-                bot_uttr += '\n' + text
+        tmp_dialog = process_dialogue_pairs(dialog, 
+                                            user_strings=user_strings, 
+                                            sep_token='\n', 
+                                            eos_token=EOS_TOKEN, 
+                                            mode=split)
 
-            if speaker == 'sys' and speaker!= dialog[uttr_idx-1][0]:
-                tmp_dialog.append(['User: ' + usr_uttr.strip() + f'{SEP_TOKEN}Bot: ', bot_uttr.strip()])
-                usr_uttr, bot_uttr = '', ''
+        if split == 'train':
+            ret.extend([tmp_dialog[i:i+max_turn] for i in range(0, len(tmp_dialog) - overlap, max_turn - overlap)])  # with overlap
+        else:
+            ret.append(tmp_dialog)
 
-        ret.extend([tmp_dialog[i:i+max_turn] for i in range(0, len(tmp_dialog) - overlap, max_turn - overlap)])  # with overlap
-
-    print('Data loaded from esconv: ', len(ret)) # ~46k sessions
-    # sample 30 %
+    print('Data loaded from augesc: ', len(ret)) # ~72k sessions
+    # sample 20 %
     random.shuffle(ret)
-    return ret[:int(len(ret) * 0.3)]
+    return ret[:int(len(ret) * 0.2)]
 
 def process_empathetic_dialogues(split='train'):
+    max_turn, overlap = 8, 0
     ret, dialog = [], []
     dataset = load_from_disk('data/empathetic_dialogues')
     df = pd.DataFrame(dataset[split])
     speakers = []
     grouped = df.groupby('conv_id')
     for i , (name, group) in enumerate(grouped):
-        evens = ['User: '+ x.replace('_comma_', ',') + f'{SEP_TOKEN}Bot: ' for x in group['utterance'][::2]]
+        evens = ['User: '+ x.replace('_comma_', ',') + f'{SEP_TOKEN}Bot:' for x in group['utterance'][::2]]
         odds = [x.replace('_comma_', ',') for x in group['utterance'][1::2]]
         
-        res = list(zip(evens, odds))
-        if res == []:
+        tmp_dialog = list(zip(evens, odds))
+        if tmp_dialog == []:
             continue
         speakers.append(list(group['speaker_idx']))
-        ret.append(res)
+        # ret.append(tmp_dialog)
+        ret.extend([tmp_dialog[i:i+max_turn] for i in range(0, len(tmp_dialog) - overlap, max_turn - overlap)])  # with overlap
+
+    random.shuffle(ret)
     return ret # ~ 18k
 
 # bug not free yet: sometime predict user utterance
@@ -126,7 +123,7 @@ def process_esconv_seq2seq(split='train'):
                 })
                 tmp_dialog.append('Bot: '+ utterance['text'])
 
-    print('Data loaded from esconv: ', len(ret)) # ~12k
+    print('Data loaded from esconv: ', len(ret)) # ~1k
     # 2134 before truncation 
     print('Max word num: ' + str(max([len((row['input_text'] + row['output_text']).split()) for row in ret])))
     return ret
@@ -379,10 +376,11 @@ def process_atomic(split='train'):
             'oEffect': row['oEffect'],
         })
     print('Data loaded from Atomic: ', len(ret))  # ~20k
+    random.shuffle(ret)
     return ret
 
 def process_emotion_recognition(split='train'):
-    return chain(
+    ret = list(chain(
         DatasetProcessorGoEmotions(data_type=split) ,
         DatasetProcessorEmoWoz(data_type=split),
         DatasetProcessorAffectiveText(data_type=split),
@@ -393,7 +391,9 @@ def process_emotion_recognition(split='train'):
         # DatasetProcessorEmoryNLP(data_type=split),
         DatasetProcessorEmotionTweetEval(data_type=split),
         DatasetProcessorIEMOCAP(data_type=split)
-    )  # ~ 100k
+    ))  # ~ 100k
+    random.shuffle(ret)
+    return ret
 
 def process_persona_ext(split='train'):
     ret = []
@@ -434,6 +434,7 @@ def process_aspect_sentiment_pair(split='train'):
                     'input_text': sentence,
                     'pair': pair
                 })
+    random.shuffle(ret)
     return ret # ~14k
 
 def process_sentiment_quadruple(split='train'):
@@ -467,7 +468,7 @@ def process_sentiment_quadruple(split='train'):
                     # 'sentiment': sentiments,
                     'quadruples': new_quads,
                 })
-
+    random.shuffle(ret)
     return ret # ~4.5k
 
 def process_memd_absa(split='train', merge_with_acos=True):
@@ -506,6 +507,7 @@ def process_memd_absa(split='train', merge_with_acos=True):
             if item['input_text'] not in target_texts:
                 extend.append(item)
         ret.extend(extend)
+    random.shuffle(ret)
     return ret # ~ 15k
 
 def process_dmaste(split='train'):
@@ -541,8 +543,12 @@ def process_dmaste(split='train'):
                     'input_text': sentence,
                     'triples': new_triples
                 })
+    random.shuffle(ret)
     return ret # ~4k
 
 if __name__ == '__main__':
     # process_memd_absa()
-    process_dmaste()
+    # process_dmaste()
+    process_esconv(split='train')
+    process_augesc(split='train')
+    process_empathetic_dialogues()

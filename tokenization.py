@@ -68,26 +68,31 @@ def tokenize_dialogue(data):
 
     return ret
 
-def build_tokenized_dataset():
-    sample_idx = -2
-    # pair_data = chain(
-    #     # SA
-    #     wrap_aspect_sentiment_pair()[:sample_idx],
-    #     wrap_sentiment_triple()[:sample_idx],
-    #     wrap_sentiment_quadruple()[:sample_idx],
-    #     # ER
-    #     wrap_emotion_recoginiton()[:sample_idx],
-    #     # PERSONA
-    #     wrap_persona_ext()[:sample_idx],
-    #     wrap_peacok()[:sample_idx],
-    #     # CONGNITIVE
-    #     wrap_atomic()[:sample_idx],
-    # )
+def build_tokenized_dataset(data_sources, sample_idx = -2):
+    pair_data = []
+    
+    if data_sources.get("persona", False):
+        pair_data.extend(wrap_persona_ext()[:sample_idx])
+        pair_data.extend(wrap_peacok()[:sample_idx])
+    
+    if data_sources.get("commonsense", False):
+        pair_data.extend(wrap_atomic()[:sample_idx])
+        
+    if data_sources.get("sa", False):
+        pair_data.extend(wrap_aspect_sentiment_pair()[:sample_idx])
+        pair_data.extend(wrap_sentiment_triple()[:sample_idx])
+        pair_data.extend(wrap_sentiment_quadruple()[:sample_idx])
+        
+    if data_sources.get("er", False):
+        pair_data.extend(wrap_emotion_recoginiton()[:sample_idx])
+        
     ret = []
-    # ret.extend(tokenize_pair(pair_data))
-    ret.extend(tokenize_dialogue(wrap_esc_like()[:sample_idx]))
+    ret.extend(tokenize_pair(pair_data))
+    
+    if data_sources.get("dialog", False):
+        ret.extend(tokenize_dialogue(wrap_esc_like()[:sample_idx]))
+    
     return ret
-    # return tokenize_dialogue(wrap_esc_like()[:sample_idx])
 
 
 if __name__ == '__main__':

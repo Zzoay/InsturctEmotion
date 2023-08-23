@@ -12,21 +12,24 @@ from data_process import *
 from config import *
 
 
-def wrap_esc():
+def wrap_esc(split='train'):
     ret = []
     prompts = json.load(open('ed_prompts.txt'))
-    data = process_esconv()
-    for sample in data:
+    for sample in process_esconv(split):
+    # for sample in chain(process_esconv()):
         prompt = random.choice(prompts)
-        prompt = " ".join(prompt.values()) + f"{SEP_TOKEN}"
-        ret.append({'input_text': prompt + sample['input_text'],
-                    'output_text': sample['output_text']})
-    return ret
+        prompt = " ".join(prompt.values()).strip()
+        if prompt != "":
+            prompt += f"{SEP_TOKEN}"
+        ret.append({'instruction': prompt,
+                    'dialogue': sample})
+    print("Emotional Dialogue Num: " + str(len(ret)))
+    return ret  # 
 
-def wrap_esc_like():
+def wrap_esc_like(split='train'):
     ret = []
     prompts = json.load(open('ed_prompts.txt'))
-    for sample in chain(process_esconv(), process_augesc(), process_empathetic_dialogues()):
+    for sample in chain(process_esconv(split), process_augesc(split), process_empathetic_dialogues(split)):
         prompt = random.choice(prompts)
         prompt = " ".join(prompt.values()).strip()
         if prompt != "":
@@ -157,7 +160,7 @@ def wrap_atomic():
         random.shuffle(indices)
         system_prompt = random.choice(system_prompts)
         prompt = system_prompt + f"Event: {sample['event']}{SEP_TOKEN}"+ "\n".join(f'{i+1}. ' + random.choice(questions[list(sample.keys())[index]]) for i, index in enumerate(indices))
-        if random.random() < 0.1:  # add tail
+        if random.random() < 0.5:  # add tail
             prompt += random.choice(["\nAnswer the questions above. ", "\nPlease respond to the above questions point by point. "])
         answer = "\n".join(f'{i+1}. ' + "; ".join(list(sample.values())[index]) for i, index in enumerate(indices))
         ret.append({'input_text': prompt, "output_text": answer})
@@ -174,12 +177,12 @@ def wrap_emotion_recoginiton():
             sample['input_text'] = f"{SEP_TOKEN}".join(sample['input_text'])
         prompt = system_prompt + f"{SEP_TOKEN}" + sample['input_text']
         prompt += f'{SEP_TOKEN}'  + random.choice([
-            "Emotions: ", 
+            "Emotions:", 
             "Recognize emotions:",
             "Identify emotional tendencies:",
-            "Based on the text, emotions are: ",
+            "Based on the text, emotions are:",
             "Emotional labels are:",
-            "Output: ",
+            "Output:",
         ])
         # prompt += f"{SEP_TOKEN}"
         answer = sample['output_text']
@@ -204,8 +207,8 @@ def wrap_persona_ext():
             "Personality:", 
             "Persona attribute:",
             "The output attribute:",
-            "User's profile: ",
-            "Output: ",
+            "User's profile:",
+            "Output:",
         ])
         # prompt += f"{SEP_TOKEN}"
         ret.append({'input_text': prompt, 'output_text': sample['output_text']})
@@ -214,9 +217,9 @@ def wrap_persona_ext():
 def wrap_aspect_sentiment_pair():
     ret = []
     system_prompts = [
-        "You are a bot with strong emotion and sentiment recognition ability. Your task is to extract the aspects and corresponding sentiment polarities from the user's utterance. Please generate the aspects and sentiment polarities based on the following text. Use ' | ' as a separator.",
+        "You are a bot with strong emotion and sentiment recognition ability. Your task is to extract the aspects and corresponding sentiment polarities from the user's utterance. Please generate the aspects and sentiment polarities based on the following text.",
         "You are required to identify the aspects and corresponding sentiment polarities from natural language text. Please generate them on the basis of the following text.",
-        "Extract the aspects and corresponding sentiment polarities from the following utterance. Split the pair with ' | '.",
+        "Extract the aspects and corresponding sentiment polarities from the following utterance.",
     ]
     data = process_aspect_sentiment_pair()
     for sample in data:
@@ -224,23 +227,23 @@ def wrap_aspect_sentiment_pair():
         prompt = system_prompt + f"{SEP_TOKEN}" + sample['input_text'] 
         prompt += f'{SEP_TOKEN}' + random.choice([
             "Aspects and Sentiment polarities:", 
-            "Aspects and corresponding sentiments:",
-            "Aspect, sentiment:",
+            "Aspects and corresponding Sentiments:",
+            "Aspect, Sentiment:",
             "Output:",
         ])
         # prompt += f"{SEP_TOKEN}"
         if type(sample['pair'][0]) != list:
             sample['pair'] = [sample['pair']]
-        pair_str = "; ".join([f"{x[0]} | {x[1]}" for x in sample['pair']])
+        pair_str = "\n".join([f"aspect: {x[0]}, sentiment: {x[1]}" for x in sample['pair']])
         ret.append({'input_text': prompt, 'output_text': pair_str})
     return ret
 
 def wrap_sentiment_quadruple():
     ret = []
     system_prompts = [
-        "You are a robot with emotional and reasoning capabilities. Your task is to extract the quadruple of aspect, category, opinion and sentiment from a given text. Please output the tetrad based on the given text below. Sometimes quaternions have missing elements.",
-        "Given a text below, generate the quadruple of aspect, category, opinion and sentiment. Use ' | ' as a separator.",
-        "Generate the quadruple of aspect, category, opinion and sentiment from the following text. The format is: '{{aspect}} | {{catagory}} | {{opinion}} | {{sentiment}}', where some args can be 'none'. Split quadruples with semicolon."
+        "You are a robot with emotional and reasoning capabilities. Your task is to extract the quadruple of aspect, category, opinion and sentiment from a given text. Please output the quaternaries based on the given text below. Sometimes quaternions have missing elements.",
+        "Given a text below, generate the quadruple of aspect, category, opinion and sentiment.",
+        "Generate the quadruple of aspect, category, opinion and sentiment from the following text. The format is: '{{aspect}}, {{category}}, {{opinion}}, {{sentiment}}', where some items can be empty."
     ]
     # data = process_sentiment_quadruple()
     data = process_memd_absa()
@@ -248,7 +251,7 @@ def wrap_sentiment_quadruple():
         system_prompt = random.choice(system_prompts)
         prompt = system_prompt + f"{SEP_TOKEN}" + sample['input_text']
         prompt += f'{SEP_TOKEN}' + random.choice([
-            "Aspects, Catagories, Opinion and Sentiment polarities:", 
+            "Aspects, Categories, Opinion and Sentiment polarities:", 
             "ABSA Quaternaries:",
             "Quadruples are:",
             "Output:",
@@ -274,20 +277,25 @@ def wrap_sentiment_quadruple():
             #     new_quads.append(f"about {catagory} is {opinion} thus {sentiment}")
             #     continue
             # new_quads.append(f"about {aspect} as {catagory} is {opinion} thus {sentiment}")
-            if opinion == '':
-                opinion = 'none'
+            if aspect == '' and opinion == '':
+                new_quads.append(f"category: {catagory}, sentiment: {sentiment}")
+                continue
             if aspect == '':
-                aspect = 'none'
-            new_quads.append(f"{aspect} | {catagory} | {opinion} | {sentiment}")
-        quad_str = f"; ".join(new_quads)
+                new_quads.append(f"category: {catagory}, opinion: {opinion}, sentiment: {sentiment}")
+                continue
+            if opinion == '':
+                new_quads.append(f"aspect: {aspect}, category: {catagory}, sentiment: {sentiment}")
+                continue
+            new_quads.append(f"aspect: {aspect}, category: {catagory}, opinion: {opinion}, sentiment: {sentiment}")
+        quad_str = f"\n".join(new_quads)
         ret.append({'input_text': prompt, 'output_text': quad_str})
     return ret
 
 def wrap_sentiment_triple():
     ret = []
     system_prompts = [
-        "As a robot endowed with emotion and logic, your mission is to derive a triplet that encapsulates aspect, opinion, and sentiment from the presented text. Please provide a tetrad in accordance with the text below. Use ' | ' as a separator.",
-        "From the text provided below, your task is to extract a triplet comprising of aspect, opinion, and sentiment. The format is: '{{aspect}} | {{opinion}} | {{sentiment}}', where some items could be 'none'.",
+        "As a robot endowed with emotion and logic, your mission is to derive a triplet that encapsulates aspect, opinion, and sentiment from the presented text. Please extract a triplet in accordance from the text below.",
+        "From the text provided below, your task is to extract a triplet comprising of aspect, opinion, and sentiment. The format is: '{{aspect}}, {{opinion}}, {{sentiment}}', where some items could be empty.",
         "Please extract a three-part element comprising of aspect, opinion and sentiment based on the text that follows. Sometimes ternaries have missing elements."
     ]
     data = process_dmaste()
@@ -315,12 +323,17 @@ def wrap_sentiment_triple():
             #     continue
             # new_triples.append(f"about {aspect} is {opinion} thus {sentiment}")
             # split by ' | '
+            if aspect == '' and opinion == '':
+                new_triples.append(f"sentiment: {sentiment}")
+                continue
             if aspect == '':
-                aspect = 'none'
+                new_triples.append(f"opinion: {opinion}, sentiment: {sentiment}")
+                continue
             if opinion == '':
-                opinion = 'none'
-            new_triples.append(f"{aspect} | {opinion} | {sentiment}")
-        tri_str = f"; ".join(new_triples)
+                new_triples.append(f"opinion: {opinion}, sentiment: {sentiment}")
+                continue
+            new_triples.append(f"aspect: {aspect}, opinion: {opinion}, sentiment: {sentiment}")
+        tri_str = f"\n".join(new_triples)
         ret.append({'input_text': prompt, 'output_text': tri_str})
         # yield {'input_text': prompt, 'output_text': tri_str}
     return ret  # for debug
@@ -328,5 +341,5 @@ def wrap_sentiment_triple():
 
 
 if __name__ == '__main__':
-    # wrap_sentiment_triple()
-    wrap_esc_like()
+    wrap_aspect_sentiment_pair()
+    # wrap_esc_like()

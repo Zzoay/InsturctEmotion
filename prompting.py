@@ -15,7 +15,7 @@ from datasets import load_dataset, load_from_disk
 
 import openai
 openai_config = json.load(open('config/openai.json'))
-os.environ['OPENAI_API_BASE'] = openai_config['openai_api_base']
+openai.api_base = openai_config['openai_api_base']
 openai.api_key = openai_config ['api_key']
 
 
@@ -46,15 +46,19 @@ def process_esconv(split='train'):
     print('Data loaded from esconv: ', len(ret)) # ~1k sessions
     return ret
 
-def get_response(history_messages):
+def get_response(history_messages, temperature=0.5, top_p=1, max_tokens=100):
     while True:
         try:
-            completion = openai.ChatCompletion.create(model="gpt-4", temperature=0.1, messages=history_messages)
-        except openai.error.RateLimitError or openai.error.ServiceUnavailableError or openai.error.APIConnectionError:
-            time.sleep(10)
+            completion = openai.ChatCompletion.create(model="gpt-3.5-turbo-0613", temperature=temperature, top_p=top_p, messages=history_messages, max_tokens=max_tokens)
+        except Exception as e:
+            print(e)
+            time.sleep(3)
             continue
         break
     return completion.choices[0].message.content.strip()
+
+def extract_num(s):
+    return float(re.findall(r'(\d+\.\d+|\d+)', s)[0])
 
 def prompt(turn=8):
     sample = process_esconv('train')[0]

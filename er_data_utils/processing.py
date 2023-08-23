@@ -434,8 +434,8 @@ class DatasetProcessorEmoryNLP:
                         continue
 
                     offset = 0
-                    if i > 7:  # keep 8 turns
-                        offset = i - 7
+                    if i > 5:  # keep 6 turns
+                        offset = i - 5
                     results['input_text'].append(dialogue[offset:i+1])
                     results['output_text'].append(emotion)
         return results
@@ -610,8 +610,8 @@ class DatasetProcessorIEMOCAP:
                     continue
 
                 offset = 0
-                if i > 9:  # keep 10 turns
-                    offset = i - 9
+                if i > 5:  # keep 6 turns
+                    offset = i - 5
                 results['input_text'].append(dialogue[offset:i+1])
                 results['output_text'].append(emotion)
         return results
