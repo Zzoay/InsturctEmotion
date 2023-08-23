@@ -2,6 +2,10 @@
 Fine-tuning Llama2 on open-source emotion data.
 We have collect several high-quality emotional data, including tasks of **emotion recognition, emotion support conversation, sentiment analysis, persona extraction, and commonsense learning**.
 We unify these tasks into instruction tuning.
+
+## Download Datasets
+Please download the datasets from Google Drive: 
+https://drive.google.com/file/d/1sa6qp1Gif5WAj0QlHsLozTXdpk6MmYB2/view?usp=sharing
 ## Fine-tuning
 ```
 deepspeed \
@@ -15,7 +19,7 @@ deepspeed \
 - [ ] Auto Evaluation (GPT-3.5, GPT-4, Claude).
 - [ ] More data.
 
-## Data List
+## Dataset List
 ### Emotion Recognition
 GoEmotions
 ```bibtex
