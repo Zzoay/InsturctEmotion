@@ -1,5 +1,5 @@
-# EmoLA
-Fine-tuning Llama2 on open-source emotion data.
+# InstructEmotion
+Fine-tuning Llama2 (expandable to other models) on open-source emotion data.
 We have collect several high-quality emotional data, including tasks of **emotion recognition, emotion support conversation, sentiment analysis, persona extraction, and commonsense learning**.
 We unify these tasks into instruction tuning.
 
@@ -348,7 +348,7 @@ If you feel it is useful, please cite the data you used and this item:
 ```bibtex
 @misc{jiang-emola-2023,
     author = {Gongyao Jiang},
-    title = {EmoLA: Fine-tuning Llama2 on open-source emotion data},
+    title = {InstructEmotion: Fine-tuning Llama2 on open-source emotion data},
     year = {2023},
     publisher = {GitHub},
     journal = {GitHub repository},
