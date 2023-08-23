@@ -3,13 +3,12 @@ import json
 import random
 from itertools import chain
 
-RANDOM_SEED = 42
-random.seed(RANDOM_SEED)
-
 from datasets import load_from_disk
 
 from data_process import *
-from config import *
+from constant import *
+
+random.seed(RANDOM_SEED)
 
 
 def wrap_esc(split='train'):

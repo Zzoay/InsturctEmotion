@@ -6,12 +6,12 @@ from transformers import AutoTokenizer
 from transformers import LlamaForCausalLM, LlamaTokenizer
 
 from prompt_wrap import *
+from constant import *
 
 model_name_or_path = '/data/jianggongyao/Llama-2-7b-hf/'
 tokenizer = LlamaTokenizer.from_pretrained(model_name_or_path)
 max_source_length = 640
 max_target_length = 384
-IGNORE_INDEX = -100
 
 
 def tokenize_pair(data):

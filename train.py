@@ -20,7 +20,7 @@ from peft import (
 )
 
 from tokenization import build_tokenized_dataset
-from config import IGNORE_INDEX
+from constant import IGNORE_INDEX, RANDOM_SEED
 
 
 def set_all_seeds(seed_value):
@@ -34,7 +34,7 @@ def set_all_seeds(seed_value):
         torch.backends.cudnn.deterministic = True 
         torch.backends.cudnn.benchmark = False
 
-set_all_seeds(42)
+set_all_seeds(RANDOM_SEED)
 
 def train():
     model_name_or_path = '/data/jianggongyao/Llama-2-7b-hf/'
