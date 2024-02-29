@@ -1,6 +1,6 @@
 # InstructEmotion
 Fine-tuning Llama2 (expandable to other models) on open-source emotion data.
-We have collect several high-quality emotional data, including tasks of **emotion recognition, emotion support conversation, sentiment analysis, persona extraction, and commonsense learning**.
+We have collected several high-quality emotional data, including tasks of **emotion recognition, emotion support conversation, sentiment analysis, persona extraction, and commonsense learning**.
 We unify these tasks into instruction tuning.
 
 ## Download Datasets
