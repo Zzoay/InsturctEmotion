@@ -1,0 +1,6 @@
+{
+    "lora_r": 8,
+    "lora_alpha": 8,
+    "lora_dropout": 0.1,
+    "lora_bias": "none"
+}
